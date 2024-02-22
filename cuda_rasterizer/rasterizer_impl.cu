@@ -216,6 +216,7 @@ int CudaRasterizer::Rasterizer::forward(
 	const float tan_fovx, float tan_fovy,
 	const bool prefiltered,
 	float* out_color,
+	int* toDo,
 	int* radii,
 	bool debug)
 {
@@ -317,6 +318,12 @@ int CudaRasterizer::Rasterizer::forward(
 			imgState.ranges);
 	CHECK_CUDA(, debug)
 
+	int *toDo_host, *toDo_dev;
+	int block_size = 50*50 * sizeof(int);
+	toDo_host = (int *)malloc(block_size);
+	cudaMalloc(&toDo_dev, block_size);
+
+
 	// Let each tile blend its range of Gaussians independently in parallel
 	const float* feature_ptr = colors_precomp != nullptr ? colors_precomp : geomState.rgb;
 	CHECK_CUDA(FORWARD::render(
@@ -330,7 +337,20 @@ int CudaRasterizer::Rasterizer::forward(
 		imgState.accum_alpha,
 		imgState.n_contrib,
 		background,
-		out_color), debug)
+		out_color, toDo), debug)
+	/*
+	cudaMemcpy(toDo_host, toDo_dev, block_size, cudaMemcpyDeviceToHost);
+	std::ofstream file("/home/sslunder0/project/NextProject/gaussian-splatting/submodules/diff-gaussian-rasterization/toDo.csv");
+    file << "Index,Value\n";
+    for(int i = 0; i < 50*50; ++i) {
+        file << i << "," << toDo_host[i] << "\n";
+    }
+    file.close();
+    std::cout << "CSV file has been written." << std::endl;
+	*/
+	
+
+	//cudaMemcpy(toDo, toDo_dev, block_size, cudaMemcpyDeviceToDevice);
 
 	return num_rendered;
 }
