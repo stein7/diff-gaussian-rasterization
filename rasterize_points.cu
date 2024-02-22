@@ -24,6 +24,8 @@
 #include <string>
 #include <functional>
 
+#include "cuda_rasterizer/rasterizer_impl.h"
+
 std::function<char*(size_t N)> resizeFunctional(torch::Tensor& t) {
     auto lambda = [&t](size_t N) {
         t.resize_({(long long)N});
@@ -32,7 +34,7 @@ std::function<char*(size_t N)> resizeFunctional(torch::Tensor& t) {
     return lambda;
 }
 
-std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, const float, int, float> //, std::unique_ptr<CudaRasterizer::BinningState>
 RasterizeGaussiansCUDA(
 	const torch::Tensor& background,
 	const torch::Tensor& means3D,
@@ -78,6 +80,10 @@ RasterizeGaussiansCUDA(
   std::function<char*(size_t)> imgFunc = resizeFunctional(imgBuffer);
   
   int rendered = 0;
+  float focal_y = 0;
+  int KKK = 0;
+  float Cuda_value = 0;
+  std::unique_ptr<CudaRasterizer::BinningState> binstate;
   if(P != 0)
   {
 	  int M = 0;
@@ -85,8 +91,8 @@ RasterizeGaussiansCUDA(
 	  {
 		M = sh.size(1);
       }
-
-	  rendered = CudaRasterizer::Rasterizer::forward(
+		
+	  std::tie(rendered, focal_y, KKK, Cuda_value, binstate) = CudaRasterizer::Rasterizer::forward(
 	    geomFunc,
 		binningFunc,
 		imgFunc,
@@ -110,8 +116,9 @@ RasterizeGaussiansCUDA(
 		out_color.contiguous().data<float>(),
 		radii.contiguous().data<int>(),
 		debug);
+		
   }
-  return std::make_tuple(rendered, out_color, radii, geomBuffer, binningBuffer, imgBuffer);
+  return std::make_tuple(rendered, out_color, radii, geomBuffer, binningBuffer, imgBuffer, means3D, sh, focal_y, KKK, Cuda_value); //, std::move(binstate)
 }
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>

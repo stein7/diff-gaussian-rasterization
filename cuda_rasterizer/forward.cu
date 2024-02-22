@@ -15,6 +15,9 @@
 #include <cooperative_groups/reduce.h>
 namespace cg = cooperative_groups;
 
+#include <iostream>
+#include <stdio.h> 
+
 // Forward method for converting the input spherical harmonics
 // coefficients of each Gaussian to a simple RGB color.
 __device__ glm::vec3 computeColorFromSH(int idx, int deg, int max_coeffs, const glm::vec3* means, glm::vec3 campos, const float* shs, bool* clamped)
@@ -270,8 +273,18 @@ renderCUDA(
 	float* __restrict__ final_T,
 	uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ bg_color,
-	float* __restrict__ out_color)
+	float* __restrict__ out_color,
+	int* KKK,
+	float Cuda_value)
 {
+	
+	if (blockIdx.x == 49 && blockIdx.y == 49 && threadIdx.x == 15 && threadIdx.y == 15) { 
+    	printf("block: (%d, %d), thread: (%d, %d)\n", blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y);
+		*KKK = 100;
+		//printf("kkk:   %d  kkk 주소: %d \n", *KKK, KKK);
+		printf("block: (%d, %d), thread: (%d, %d)\n", blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y);
+	}
+	
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
 	uint32_t horizontal_blocks = (W + BLOCK_X - 1) / BLOCK_X;
@@ -301,7 +314,8 @@ renderCUDA(
 	uint32_t contributor = 0;
 	uint32_t last_contributor = 0;
 	float C[CHANNELS] = { 0 };
-
+	
+	
 	// Iterate over batches until all done or range is complete
 	for (int i = 0; i < rounds; i++, toDo -= BLOCK_SIZE)
 	{
@@ -359,6 +373,12 @@ renderCUDA(
 			// Keep track of last range entry to update this
 			// pixel.
 			last_contributor = contributor;
+			if (blockIdx.x == 49 && blockIdx.y == 49 && threadIdx.x == 15 ) {
+				//Cuda_value = T;
+				printf("KKK : %d , Cuda : %f \n", KKK, Cuda_value);
+			}
+			
+
 		}
 	}
 
@@ -384,8 +404,13 @@ void FORWARD::render(
 	float* final_T,
 	uint32_t* n_contrib,
 	const float* bg_color,
-	float* out_color)
+	float* out_color,
+	int KKK,
+	float Cuda_value)
 {
+	std::cout << "grid: (" << grid.x << ", " << grid.y << ", " << grid.z << ")" << std::endl;
+	std::cout << "block: (" << block.x << ", " << block.y << ", " << block.z << ")" << std::endl;
+	printf("KKK : %d , Cuda : %f \n", KKK, Cuda_value);
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
 		point_list,
@@ -396,7 +421,11 @@ void FORWARD::render(
 		final_T,
 		n_contrib,
 		bg_color,
-		out_color);
+		out_color,
+		&KKK,
+		Cuda_value);
+	cudaDeviceSynchronize();
+	printf("After KKK : %d , Cuda : %f \n", KKK, Cuda_value);
 }
 
 void FORWARD::preprocess(int P, int D, int M,

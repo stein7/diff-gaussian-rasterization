@@ -15,8 +15,11 @@
 #include <vector>
 #include <functional>
 
+#include <memory>
+#include "rasterizer_impl.h"
 namespace CudaRasterizer
 {
+	struct BinningState;
 	class Rasterizer
 	{
 	public:
@@ -28,7 +31,9 @@ namespace CudaRasterizer
 			float* projmatrix,
 			bool* present);
 
-		static int forward(
+		//static int forward()//
+		std::tuple<int, const float, int, float, std::unique_ptr<CudaRasterizer::BinningState>>
+		static forward(
 			std::function<char* (size_t)> geometryBuffer,
 			std::function<char* (size_t)> binningBuffer,
 			std::function<char* (size_t)> imageBuffer,

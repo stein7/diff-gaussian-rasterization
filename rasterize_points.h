@@ -14,8 +14,10 @@
 #include <cstdio>
 #include <tuple>
 #include <string>
+
+#include "cuda_rasterizer/rasterizer_impl.h"
 	
-std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, const float, int, float> //, std::unique_ptr<CudaRasterizer::BinningState>
 RasterizeGaussiansCUDA(
 	const torch::Tensor& background,
 	const torch::Tensor& means3D,

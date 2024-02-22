@@ -30,6 +30,8 @@ namespace cg = cooperative_groups;
 #include "forward.h"
 #include "backward.h"
 
+#include <memory>
+
 // Helper function to find the next-highest bit of the MSB
 // on the CPU.
 uint32_t getHigherMsb(uint32_t n)
@@ -195,7 +197,9 @@ CudaRasterizer::BinningState CudaRasterizer::BinningState::fromChunk(char*& chun
 
 // Forward rendering procedure for differentiable rasterization
 // of Gaussians.
-int CudaRasterizer::Rasterizer::forward(
+//int CudaRasterizer::Rasterizer::forward(
+std::tuple<int, const float, int, float, std::unique_ptr<CudaRasterizer::BinningState>>
+CudaRasterizer::Rasterizer::forward(
 	std::function<char* (size_t)> geometryBuffer,
 	std::function<char* (size_t)> binningBuffer,
 	std::function<char* (size_t)> imageBuffer,
@@ -315,8 +319,31 @@ int CudaRasterizer::Rasterizer::forward(
 			num_rendered,
 			binningState.point_list_keys,
 			imgState.ranges);
-	CHECK_CUDA(, debug)
+	CHECK_CUDA(, debug) 
+	
 
+	
+	/*
+	size_t N = width * height;
+	float* accum_alpha_cpu = new float[N];
+    uint32_t* n_contrib_cpu = new uint32_t[N];
+    uint2* ranges_cpu = new uint2[N];
+
+    // GPU 메모리에서 CPU 메모리로 데이터 복사
+    cudaMemcpy(accum_alpha_cpu, imgState.accum_alpha, N * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(n_contrib_cpu, imgState.n_contrib, N * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(ranges_cpu, imgState.ranges, N * sizeof(uint2), cudaMemcpyDeviceToHost);
+
+	for (size_t i = 0; i < N; i += 10000) {
+        std::cout << "accum_alpha[" << i << "]: " << accum_alpha_cpu[i] << ", ";
+        std::cout << "n_contrib[" << i << "]: " << n_contrib_cpu[i] << ", ";
+        std::cout << "ranges[" << i << "]: (" << ranges_cpu[i].x << ", " << ranges_cpu[i].y << ")\n";
+		//std::cout << "cont : " << imgState.n_contrib[0] << ")\n";
+    }
+	*/
+
+	int KKK = 1;
+	float Cuda_value = 1;
 	// Let each tile blend its range of Gaussians independently in parallel
 	const float* feature_ptr = colors_precomp != nullptr ? colors_precomp : geomState.rgb;
 	CHECK_CUDA(FORWARD::render(
@@ -330,11 +357,19 @@ int CudaRasterizer::Rasterizer::forward(
 		imgState.accum_alpha,
 		imgState.n_contrib,
 		background,
-		out_color), debug)
-
-	return num_rendered;
+		out_color,
+		KKK,
+		Cuda_value), debug)
+	
+	/*
+	for (size_t i = 0; i < 30; ++i) {
+    	std::cout << binningState.point_list[i] << std::endl;
+	}
+	*/
+	std::unique_ptr<BinningState> binningStateCopy = std::make_unique<BinningState>(binningState);
+	//return num_rendered;
+	return std::make_tuple(num_rendered, focal_y, KKK, Cuda_value, std::move(binningStateCopy));
 }
-
 // Produce necessary gradients for optimization, corresponding
 // to forward render pass
 void CudaRasterizer::Rasterizer::backward(
