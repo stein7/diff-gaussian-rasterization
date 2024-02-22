@@ -13,7 +13,7 @@ from typing import NamedTuple
 import torch.nn as nn
 import torch
 from . import _C
-
+import numpy
 import pdb
 
 def cpu_deep_copy_tuple(input_tuple):
