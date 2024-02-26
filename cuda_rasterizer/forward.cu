@@ -229,7 +229,7 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	float mid = 0.5f * (cov.x + cov.z);
 	float lambda1 = mid + sqrt(max(0.1f, mid * mid - det));
 	float lambda2 = mid - sqrt(max(0.1f, mid * mid - det));
-	float my_radius = ceil(3.f * sqrt(max(lambda1, lambda2)));
+	float my_radius = ceil(2.f * sqrt(max(lambda1, lambda2)));
 	float2 point_image = { ndc2Pix(p_proj.x, W), ndc2Pix(p_proj.y, H) };
 	uint2 rect_min, rect_max;
 	getRect(point_image, my_radius, rect_min, rect_max, grid);
@@ -271,7 +271,7 @@ renderCUDA(
 	uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ bg_color,
 	float* __restrict__ out_color, 
-	int* toDo_dev, int* toDo_ES)
+	int* toDo_dev, int* toDo_ES, float* pix_power)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -295,6 +295,7 @@ renderCUDA(
 	int grid_idx = block.group_index().x + block.group_index().y * gridDim.x; 
 	toDo_dev[grid_idx] = toDo; 
 	toDo_ES[pix_id] = toDo;
+	
 	// Allocate storage for batches of collectively fetched data.
 	__shared__ int collected_id[BLOCK_SIZE];
 	__shared__ float2 collected_xy[BLOCK_SIZE];
@@ -337,6 +338,8 @@ renderCUDA(
 			float2 d = { xy.x - pixf.x, xy.y - pixf.y };
 			float4 con_o = collected_conic_opacity[j];
 			float power = -0.5f * (con_o.x * d.x * d.x + con_o.z * d.y * d.y) - con_o.y * d.x * d.y;
+			if (j == 0)
+				pix_power[pix_id] = power;
 			if (power > 0.0f)
 				continue;
 
@@ -389,7 +392,7 @@ void FORWARD::render(
 	uint32_t* n_contrib,
 	const float* bg_color,
 	float* out_color, 
-	int* toDo_dev, int* toDo_ES)
+	int* toDo_dev, int* toDo_ES, float* power)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
@@ -402,7 +405,7 @@ void FORWARD::render(
 		n_contrib,
 		bg_color,
 		out_color, 
-		toDo_dev, toDo_ES);
+		toDo_dev, toDo_ES, power);
 }
 
 void FORWARD::preprocess(int P, int D, int M,

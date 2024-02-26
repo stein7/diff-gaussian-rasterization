@@ -216,7 +216,7 @@ int CudaRasterizer::Rasterizer::forward(
 	const float tan_fovx, float tan_fovy,
 	const bool prefiltered,
 	float* out_color,
-	int* toDo, int* toDo_ES, int* n_contrib, float* accum_alpha, 
+	int* toDo, int* toDo_ES, int* n_contrib, float* accum_alpha, float* power,
 	int* radii,
 	bool debug)
 {
@@ -339,7 +339,7 @@ int CudaRasterizer::Rasterizer::forward(
 		imgState.n_contrib,
 		background,
 		out_color, 
-		toDo, toDo_ES), debug)
+		toDo, toDo_ES, power), debug)
 	
 	int pixel_size = 800 * 800 ;
 	cudaMemcpy(n_contrib, imgState.n_contrib, pixel_size * sizeof(int), cudaMemcpyDeviceToDevice);

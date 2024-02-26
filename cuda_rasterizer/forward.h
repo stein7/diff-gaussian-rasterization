@@ -60,7 +60,7 @@ namespace FORWARD
 		uint32_t* n_contrib,
 		const float* bg_color,
 		float* out_color, 
-		int* toDo_dev, int* toDo_ES);
+		int* toDo_dev, int* toDo_ES, float* power);
 }
 
 
