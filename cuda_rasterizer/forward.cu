@@ -270,7 +270,8 @@ renderCUDA(
 	float* __restrict__ final_T,
 	uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ bg_color,
-	float* __restrict__ out_color, int* toDo_dev)
+	float* __restrict__ out_color, 
+	int* toDo_dev, int* toDo_ES)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -291,9 +292,9 @@ renderCUDA(
 	const int rounds = ((range.y - range.x + BLOCK_SIZE - 1) / BLOCK_SIZE);
 	int toDo = range.y - range.x;
 
-	int index = block.group_index().x + block.group_index().y * gridDim.x;
-	toDo_dev[index] = toDo; 
-
+	int grid_idx = block.group_index().x + block.group_index().y * gridDim.x; 
+	toDo_dev[grid_idx] = toDo; 
+	toDo_ES[pix_id] = toDo;
 	// Allocate storage for batches of collectively fetched data.
 	__shared__ int collected_id[BLOCK_SIZE];
 	__shared__ float2 collected_xy[BLOCK_SIZE];
@@ -364,7 +365,7 @@ renderCUDA(
 			last_contributor = contributor;
 		}
 	}
-
+	
 	// All threads that treat valid pixel write out their final
 	// rendering data to the frame and auxiliary buffers.
 	if (inside)
@@ -387,7 +388,8 @@ void FORWARD::render(
 	float* final_T,
 	uint32_t* n_contrib,
 	const float* bg_color,
-	float* out_color, int* toDo_dev)
+	float* out_color, 
+	int* toDo_dev, int* toDo_ES)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
@@ -399,7 +401,8 @@ void FORWARD::render(
 		final_T,
 		n_contrib,
 		bg_color,
-		out_color, toDo_dev);
+		out_color, 
+		toDo_dev, toDo_ES);
 }
 
 void FORWARD::preprocess(int P, int D, int M,
