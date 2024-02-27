@@ -216,7 +216,7 @@ int CudaRasterizer::Rasterizer::forward(
 	const float tan_fovx, float tan_fovy,
 	const bool prefiltered,
 	float* out_color,
-	int* toDo, int* toDo_ES, int* n_contrib, float* accum_alpha, float* power,
+	int* toDo, int* toDo_ES, int* n_contrib, float* accum_alpha, float* power, float* depths,
 	int* radii,
 	bool debug)
 {
@@ -344,6 +344,8 @@ int CudaRasterizer::Rasterizer::forward(
 	int pixel_size = 800 * 800 ;
 	cudaMemcpy(n_contrib, imgState.n_contrib, pixel_size * sizeof(int), cudaMemcpyDeviceToDevice);
 	cudaMemcpy(accum_alpha, imgState.accum_alpha, pixel_size * sizeof(float), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(depths, geomState.depths, P * sizeof(float), cudaMemcpyDeviceToDevice);
+	
 	/*
 	cudaMemcpy(toDo_host, toDo_dev, block_size, cudaMemcpyDeviceToHost);
 	std::ofstream file("/home/sslunder0/project/NextProject/gaussian-splatting/submodules/diff-gaussian-rasterization/toDo.csv");
