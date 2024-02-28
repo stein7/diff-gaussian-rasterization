@@ -49,7 +49,7 @@ namespace CudaRasterizer
 			const float tan_fovx, float tan_fovy,
 			const bool prefiltered,
 			float* out_color,
-			int* toDo, int* toDo_ES, int* n_contrib, float* accum_alpha, float* power, float* depths,
+			int* toDo, int* toDo_ES, int* n_contrib, float* accum_alpha, int* ranges, float* power, float* depths, int* tiles_touched, int* point_offsets,
 			int* radii = nullptr,
 			bool debug = false);
 

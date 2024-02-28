@@ -216,7 +216,7 @@ int CudaRasterizer::Rasterizer::forward(
 	const float tan_fovx, float tan_fovy,
 	const bool prefiltered,
 	float* out_color,
-	int* toDo, int* toDo_ES, int* n_contrib, float* accum_alpha, float* power, float* depths,
+	int* toDo, int* toDo_ES, int* n_contrib, float* accum_alpha, int* ranges, float* power, float* depths, int* tiles_touched, int* point_offsets,
 	int* radii,
 	bool debug)
 {
@@ -342,10 +342,14 @@ int CudaRasterizer::Rasterizer::forward(
 		toDo, toDo_ES, power), debug)
 	
 	int pixel_size = 800 * 800 ;
+	cudaMemcpy(ranges, imgState.ranges, pixel_size * sizeof(int) *2, cudaMemcpyDeviceToDevice);
 	cudaMemcpy(n_contrib, imgState.n_contrib, pixel_size * sizeof(int), cudaMemcpyDeviceToDevice);
 	cudaMemcpy(accum_alpha, imgState.accum_alpha, pixel_size * sizeof(float), cudaMemcpyDeviceToDevice);
 	cudaMemcpy(depths, geomState.depths, P * sizeof(float), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(tiles_touched, geomState.tiles_touched, P * sizeof(int), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(point_offsets, geomState.point_offsets, P * sizeof(int), cudaMemcpyDeviceToDevice);
 	
+
 	/*
 	cudaMemcpy(toDo_host, toDo_dev, block_size, cudaMemcpyDeviceToHost);
 	std::ofstream file("/home/sslunder0/project/NextProject/gaussian-splatting/submodules/diff-gaussian-rasterization/toDo.csv");
