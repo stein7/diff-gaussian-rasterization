@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch
 from . import _C
 
+import lib.precision
+
 def cpu_deep_copy_tuple(input_tuple):
     copied_tensors = [item.cpu().clone() if isinstance(item, torch.Tensor) else item for item in input_tuple]
     return tuple(copied_tensors)
@@ -55,7 +57,16 @@ class _RasterizeGaussians(torch.autograd.Function):
         cov3Ds_precomp,
         raster_settings,
     ):
-
+        
+        with torch.no_grad():
+            means3D.data = lib.precision.fp(means3D, mode=17.1).data
+            opacities.data = lib.precision.fp(opacities, mode=17.1).data
+            if not sh.numel() == 0 : sh.data = lib.precision.fp(sh, mode=17.1).data
+            if not colors_precomp.numel() == 0 : colors_precomp.data = lib.precision.fp(colors_precomp, mode=17.1).data
+            if not scales.numel() == 0 : scales.data = lib.precision.fp(scales, mode=17.1).data
+            if not rotations.numel() == 0 : rotations.data = lib.precision.fp(rotations, mode=17.1).data
+            if not cov3Ds_precomp.numel() == 0 : cov3Ds_precomp.data = lib.precision.fp(cov3Ds_precomp, mode=17.1).data
+            
         # Restructure arguments the way that the C++ lib expects them
         args = (
             raster_settings.bg, 
@@ -90,7 +101,17 @@ class _RasterizeGaussians(torch.autograd.Function):
                 raise ex
         else:
             num_rendered, color, radii, geomBuffer, binningBuffer, imgBuffer = _C.rasterize_gaussians(*args)
-
+        
+        with torch.no_grad():
+            color.data = lib.precision.fp(color, mode=17.1).data
+            means3D.data = lib.precision.fp(means3D, mode=17.1).data
+            opacities.data = lib.precision.fp(opacities, mode=17.1).data
+            if not sh.numel()             == 0 : sh.data = lib.precision.fp(sh, mode=17.1).data
+            if not colors_precomp.numel() == 0 : colors_precomp.data = lib.precision.fp(colors_precomp, mode=17.1).data
+            if not scales.numel()         == 0 : scales.data = lib.precision.fp(scales, mode=17.1).data
+            if not rotations.numel()      == 0 : rotations.data = lib.precision.fp(rotations, mode=17.1).data
+            if not cov3Ds_precomp.numel() == 0 : cov3Ds_precomp.data = lib.precision.fp(cov3Ds_precomp, mode=17.1).data
+            
         # Keep relevant tensors for backward
         ctx.raster_settings = raster_settings
         ctx.num_rendered = num_rendered
@@ -104,6 +125,14 @@ class _RasterizeGaussians(torch.autograd.Function):
         num_rendered = ctx.num_rendered
         raster_settings = ctx.raster_settings
         colors_precomp, means3D, scales, rotations, cov3Ds_precomp, radii, sh, geomBuffer, binningBuffer, imgBuffer = ctx.saved_tensors
+
+        with torch.no_grad():
+            means3D.data = lib.precision.fp(means3D, mode=17.1).data
+            if not sh.numel()             == 0 : sh.data = lib.precision.fp(sh, mode=17.1).data
+            if not colors_precomp.numel() == 0 : colors_precomp.data = lib.precision.fp(colors_precomp, mode=17.1).data
+            if not scales.numel()         == 0 : scales.data = lib.precision.fp(scales, mode=17.1).data
+            if not rotations.numel()      == 0 : rotations.data = lib.precision.fp(rotations, mode=17.1).data
+            if not cov3Ds_precomp.numel() == 0 : cov3Ds_precomp.data = lib.precision.fp(cov3Ds_precomp, mode=17.1).data
 
         # Restructure args as C++ method expects them
         args = (raster_settings.bg,
@@ -140,6 +169,16 @@ class _RasterizeGaussians(torch.autograd.Function):
         else:
              grad_means2D, grad_colors_precomp, grad_opacities, grad_means3D, grad_cov3Ds_precomp, grad_sh, grad_scales, grad_rotations = _C.rasterize_gaussians_backward(*args)
 
+        with torch.no_grad():
+            grad_means2D.data = lib.precision.fp(grad_means2D, mode=17.1).data
+            grad_means3D.data = lib.precision.fp(grad_means3D, mode=17.1).data
+            grad_opacities.data = lib.precision.fp(grad_opacities, mode=17.1).data
+            if not grad_colors_precomp.numel() == 0 : grad_colors_precomp.data = lib.precision.fp(grad_colors_precomp, mode=17.1).data
+            if not grad_sh.numel()             == 0 : grad_sh.data = lib.precision.fp(grad_sh, mode=17.1).data
+            if not grad_scales.numel()         == 0 : grad_scales.data = lib.precision.fp(grad_scales, mode=17.1).data
+            if not grad_rotations.numel()      == 0 : grad_rotations.data = lib.precision.fp(grad_rotations, mode=17.1).data
+            if not grad_cov3Ds_precomp.numel() == 0 : grad_cov3Ds_precomp.data = lib.precision.fp(grad_cov3Ds_precomp, mode=17.1).data
+
         grads = (
             grad_means3D,
             grad_means2D,
@@ -151,7 +190,6 @@ class _RasterizeGaussians(torch.autograd.Function):
             grad_cov3Ds_precomp,
             None,
         )
-
         return grads
 
 class GaussianRasterizationSettings(NamedTuple):
